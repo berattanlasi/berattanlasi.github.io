@@ -255,6 +255,7 @@ const icons = {
   clock: strokeIcon('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
   sparkle: strokeIcon('<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/>'),
   code: strokeIcon('<path d="M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/>'),
+  pen: strokeIcon('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>'),
   camera: strokeIcon(
     '<path d="M4 8h3l2-3h6l2 3h3v11H4Z"/><circle cx="12" cy="13" r="3.5"/>',
   ),
@@ -671,9 +672,9 @@ const renderHome = () => {
           <div class="avatar-orbit__photo">
             <img id="hero-avatar" src="${profileImage}" alt="Portrait of Berat Tanlasi" decoding="async" />
           </div>
-          <span class="float-chip float-chip--1">${icons.pin} Istanbul</span>
-          <span class="float-chip float-chip--2">${icons.code} JavaScript</span>
-          <span class="float-chip float-chip--3">${icons.camera} ${galleryImages.length} frames</span>
+          <span class="float-chip float-chip--1">${icons.code} Web Developer</span>
+          <span class="float-chip float-chip--2">${icons.pen} Travel Writer</span>
+          <span class="float-chip float-chip--3">${icons.camera} Street Photographer</span>
         </div>
       </div>
     </section>

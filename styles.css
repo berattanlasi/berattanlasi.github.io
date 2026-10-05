@@ -3206,3 +3206,11 @@ body.is-modal-open {
     translate: none !important;
   }
 }
+
+/* Çok dar telefonlarda (ör. 360 px) menünün tamamı sığsın */
+@media (max-width: 380px) {
+  .site-nav a {
+    padding: 7px 5px;
+    font-size: 0.75rem;
+  }
+}
