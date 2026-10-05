@@ -22,7 +22,7 @@
   --header-bg: rgba(5, 6, 10, 0.72);
   --footer-bg: rgba(5, 6, 10, 0.72);
   --panel: rgba(12, 14, 22, 0.95);
-  --grid-line: rgba(255, 255, 255, 0.035);
+  --glow-color: rgba(124, 108, 255, 0.18);
   --vignette: rgba(5, 6, 10, 0.85);
   --accent-soft: #b9d9ff;
   --tag-text: #9ccfff;
@@ -60,7 +60,7 @@ html[data-theme="light"] {
   --header-bg: rgba(245, 246, 250, 0.82);
   --footer-bg: rgba(255, 255, 255, 0.75);
   --panel: rgba(255, 255, 255, 0.97);
-  --grid-line: rgba(20, 24, 45, 0.05);
+  --glow-color: rgba(124, 58, 237, 0.12);
   --vignette: rgba(245, 246, 250, 0.9);
   --accent-soft: #2f5fbf;
   --tag-text: #1f5fc4;
@@ -335,15 +335,15 @@ a {
   transition: opacity 0.5s ease;
 }
 
-.bg-layer__grid {
+/* Fareyi yumuşakça takip eden renkli ışık (JS --glow-x / --glow-y değişkenlerini ayarlar) */
+.bg-layer__glow {
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 64px 64px;
-  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
+  background: radial-gradient(
+    560px circle at var(--glow-x, 70%) var(--glow-y, 18%),
+    var(--glow-color),
+    transparent 70%
+  );
 }
 
 .bg-layer__vignette {

@@ -1735,6 +1735,49 @@ render();
   };
   let columnColors = buildColumnColors();
 
+  // Her renk için bir kez yuvarlak, kenarı yumuşak bir nokta çiz; her karede
+  // bu küçük görseller kopyalanır (binlerce daireyi tek tek çizmekten çok daha hızlı)
+  const SPRITE_SIZE = 32;
+  const buildDotSprites = () =>
+    columnColors.map((color) => {
+      const sprite = document.createElement("canvas");
+      sprite.width = SPRITE_SIZE;
+      sprite.height = SPRITE_SIZE;
+      const spriteContext = sprite.getContext("2d");
+      const radius = SPRITE_SIZE / 2;
+      const gradient = spriteContext.createRadialGradient(radius, radius, 0, radius, radius, radius);
+      gradient.addColorStop(0, color);
+      gradient.addColorStop(0.4, color);
+      gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+      spriteContext.fillStyle = gradient;
+      spriteContext.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+      return sprite;
+    });
+  let dotSprites = buildDotSprites();
+
+  // Arka plandaki renkli ışık: fareyi gecikmeli takip eder, dokunmatik
+  // cihazlarda kendi kendine yavaşça süzülür
+  const glow = document.getElementById("bg-glow");
+  let glowTargetX = 0.7;
+  let glowTargetY = 0.18;
+  let glowX = glowTargetX;
+  let glowY = glowTargetY;
+
+  const updateGlow = (t) => {
+    if (!glow) return;
+    if (!supportsFineHover) {
+      glowTargetX = 0.5 + Math.sin(t * 0.35) * 0.3;
+      glowTargetY = 0.3 + Math.cos(t * 0.27) * 0.15;
+    }
+    const nextX = glowX + (glowTargetX - glowX) * 0.06;
+    const nextY = glowY + (glowTargetY - glowY) * 0.06;
+    if (Math.abs(nextX - glowX) + Math.abs(nextY - glowY) < 0.0002) return;
+    glowX = nextX;
+    glowY = nextY;
+    glow.style.setProperty("--glow-x", `${(glowX * 100).toFixed(2)}%`);
+    glow.style.setProperty("--glow-y", `${(glowY * 100).toFixed(2)}%`);
+  };
+
   const resize = () => {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     width = window.innerWidth;
@@ -1752,11 +1795,12 @@ render();
     const horizon = height * 0.48;
 
     cameraX += (pointerX - cameraX) * 0.04;
+    updateGlow(t);
     context.clearRect(0, 0, width, height);
 
     for (let column = 0; column < columns; column += 1) {
       const x = (column / (columns - 1) - 0.5) * 2 * spreadX;
-      context.fillStyle = columnColors[column];
+      const sprite = dotSprites[column];
 
       for (let row = 0; row < rows; row += 1) {
         const z = farZ - (row / (rows - 1)) * (farZ - nearZ);
@@ -1772,8 +1816,9 @@ render();
         const depth = 1 - (z - nearZ) / (farZ - nearZ);
         const crest = 0.45 + (y + 0.3) * 1.1;
         context.globalAlpha = Math.max(0, Math.min(1, Math.pow(depth, 1.6) * crest * 1.35));
-        const size = Math.max(0.9, 2.8 / z);
-        context.fillRect(screenX - size / 2, screenY - size / 2, size, size);
+        // Görselin dış yarısı yumuşak geçiş olduğu için çizim boyutu noktanın ~2 katı
+        const size = Math.max(1.1, 3 / z) * 2;
+        context.drawImage(sprite, screenX - size / 2, screenY - size / 2, size, size);
       }
     }
     context.globalAlpha = 1;
@@ -1812,6 +1857,7 @@ render();
 
   window.addEventListener("themechange", () => {
     columnColors = buildColumnColors();
+    dotSprites = buildDotSprites();
     if (prefersReducedMotion) draw(0);
   });
 
@@ -1820,6 +1866,8 @@ render();
       "pointermove",
       (event) => {
         pointerX = (event.clientX / window.innerWidth - 0.5) * 0.6;
+        glowTargetX = event.clientX / window.innerWidth;
+        glowTargetY = event.clientY / window.innerHeight;
       },
       { passive: true },
     );
