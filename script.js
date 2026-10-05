@@ -116,6 +116,67 @@ document.querySelectorAll("[data-social-link]").forEach((link) => {
 });
 document.getElementById("year").textContent = new Date().getFullYear();
 
+// ==================== TEMA (koyu / açık) ====================
+// Varsayılan koyu tema. Ziyaretçinin seçimi localStorage'da saklanır;
+// index.html'deki küçük script kayıtlı temayı sayfa çizilmeden uygular.
+const THEME_STORAGE_KEY = "theme";
+const themeToggle = document.getElementById("theme-toggle");
+const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+
+const getTheme = () =>
+  document.documentElement.dataset.theme === "light" ? "light" : "dark";
+
+const applyTheme = (theme) => {
+  document.documentElement.dataset.theme = theme;
+  themeColorMeta?.setAttribute("content", theme === "light" ? "#f5f6fa" : "#05060a");
+  themeToggle?.setAttribute(
+    "aria-label",
+    theme === "light" ? "Switch to dark theme" : "Switch to light theme",
+  );
+  window.dispatchEvent(new CustomEvent("themechange", { detail: theme }));
+};
+
+const saveTheme = (theme) => {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch (error) {
+    // Local storage may be unavailable in private browsing contexts.
+  }
+};
+
+applyTheme(getTheme());
+
+themeToggle?.addEventListener("click", () => {
+  const nextTheme = getTheme() === "light" ? "dark" : "light";
+  saveTheme(nextTheme);
+
+  if (!document.startViewTransition || prefersReducedMotion) {
+    applyTheme(nextTheme);
+    return;
+  }
+
+  // Yeni tema, düğmenin olduğu yerden açılan bir daireyle ekranı kaplar
+  const rect = themeToggle.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+  const radius = Math.hypot(
+    Math.max(x, window.innerWidth - x),
+    Math.max(y, window.innerHeight - y),
+  );
+
+  const transition = document.startViewTransition(() => applyTheme(nextTheme));
+  transition.ready.then(() => {
+    document.documentElement.animate(
+      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
+      {
+        duration: 600,
+        easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+        pseudoElement: "::view-transition-new(root)",
+      },
+    );
+  });
+});
+
 // Sayfa değişince durdurulması gereken zamanlayıcı/observer'lar buraya eklenir
 const addCleanup = (fn) => state.cleanups.push(fn);
 const runCleanups = () => {
@@ -854,11 +915,21 @@ const mountTravelMap = () => {
       const map = L.map(element, { scrollWheelZoom: false });
       const esriTiles = (layer) =>
         `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${layer}/MapServer/tile/{z}/{y}/{x}`;
-      L.tileLayer(esriTiles("World_Dark_Gray_Base"), {
-        attribution: "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors",
-        maxZoom: 16,
-      }).addTo(map);
-      L.tileLayer(esriTiles("World_Dark_Gray_Reference"), { maxZoom: 16 }).addTo(map);
+      let tileLayers = [];
+      const setMapTheme = () => {
+        tileLayers.forEach((layer) => layer.remove());
+        const tone = getTheme() === "light" ? "Light" : "Dark";
+        tileLayers = [
+          L.tileLayer(esriTiles(`World_${tone}_Gray_Base`), {
+            attribution: "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors",
+            maxZoom: 16,
+          }),
+          L.tileLayer(esriTiles(`World_${tone}_Gray_Reference`), { maxZoom: 16 }),
+        ];
+        tileLayers.forEach((layer) => layer.addTo(map));
+      };
+      setMapTheme();
+      window.addEventListener("themechange", setMapTheme);
 
       const markers = {};
       stories.forEach((story) => {
@@ -880,6 +951,7 @@ const mountTravelMap = () => {
       map.fitBounds(L.latLngBounds(stories.map((story) => story.coords)).pad(0.4));
       state.map = { map, markers };
       addCleanup(() => {
+        window.removeEventListener("themechange", setMapTheme);
         map.remove();
         state.map = null;
       });
@@ -1616,12 +1688,15 @@ render();
   let pointerX = 0;
   let cameraX = 0;
 
-  // Sütun başına renk: soldan sağa mavi → mor → pembe
-  const columnColors = Array.from({ length: columns }, (_, column) => {
-    const t = column / (columns - 1);
-    const hue = 205 + t * 120;
-    return `hsl(${hue}, 95%, 70%)`;
-  });
+  // Sütun başına renk: soldan sağa mavi → mor → pembe (açık temada daha koyu tonlar)
+  const buildColumnColors = () => {
+    const lightness = getTheme() === "light" ? 50 : 70;
+    return Array.from({ length: columns }, (_, column) => {
+      const hue = 205 + (column / (columns - 1)) * 120;
+      return `hsl(${hue}, 90%, ${lightness}%)`;
+    });
+  };
+  let columnColors = buildColumnColors();
 
   const resize = () => {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -1696,6 +1771,11 @@ render();
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) stop();
     else start();
+  });
+
+  window.addEventListener("themechange", () => {
+    columnColors = buildColumnColors();
+    if (prefersReducedMotion) draw(0);
   });
 
   if (supportsFineHover && !prefersReducedMotion) {
