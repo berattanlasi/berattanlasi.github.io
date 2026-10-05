@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Berat Tanlasi | Software Developer & Travel Writer</title>
+  <meta name="description"
+    content="A space where software development and travel writing meet. Explore the stories of Istanbul." />
+  <meta name="theme-color" content="#05060a" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&display=swap"
+    rel="stylesheet" />
+  <link rel="icon" type="image/jpeg" href="images/profilresmi.jpeg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <!-- Görsel arka plan katmanı: renkli ışık lekeleri + canvas üzerinde canlı nokta dalgası -->
+  <div class="bg-layer" aria-hidden="true">
+    <div class="bg-layer__aurora"></div>
+    <canvas id="bg-wave"></canvas>
+    <div class="bg-layer__grid"></div>
+    <div class="bg-layer__vignette"></div>
+  </div>
+
+  <div class="read-progress" id="read-progress" aria-hidden="true"></div>
+
+  <div class="page">
+    <header class="site-header">
+      <div class="site-header__inner">
+        <a class="brand" href="#home" aria-label="Berat Tanlasi - Home page">
+          <span class="brand__mark" aria-hidden="true">
+            <img id="brand-avatar" class="brand__photo" src="images/profilresmi.jpeg" alt="" />
+          </span>
+          <span class="brand__text">
+            <span class="brand__name">Berat Tanlasi</span>
+            <span class="brand__path">~/istanbul</span>
+          </span>
+        </a>
+
+        <nav class="site-nav" aria-label="Main menu">
+          <a href="#home" data-nav="home">Home</a>
+          <a href="#about" data-nav="about">About</a>
+          <a href="#travels" data-nav="travels">Travels</a>
+          <a href="#projects" data-nav="projects">Projects</a>
+          <a href="#gallery" data-nav="gallery">Gallery</a>
+          <a href="#contact" data-nav="contact">Contact</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="app" class="app" tabindex="-1"></main>
+
+    <footer class="site-footer" id="footer">
+      <div class="site-footer__content">
+        <div class="site-footer__brand">
+          <p class="site-footer__name">Berat Tanlasi</p>
+          <p>Software, travel & photography — written from Istanbul.</p>
+        </div>
+        <div class="footer-links">
+          <a href="mailto:tanlasiberat1@gmail.com">Email</a>
+          <a href="https://github.com/Patogon49" target="_blank" rel="noreferrer" data-github-link>GitHub</a>
+          <a href="https://www.linkedin.com/in/berat-tanlasi" target="_blank" rel="noreferrer">LinkedIn</a>
+          <a href="#home" class="footer-top">Back to top ↑</a>
+        </div>
+      </div>
+      <p class="site-footer__copy">&copy; <span id="year">2026</span> Berat Tanlasi. All rights reserved.</p>
+    </footer>
+  </div>
+
+  <div class="lightbox" hidden aria-hidden="true">
+    <div class="lightbox__backdrop" data-lightbox-close></div>
+    <div class="lightbox__panel" role="dialog" aria-modal="true" aria-label="Large image view">
+      <button class="lightbox__close" type="button" data-lightbox-close aria-label="Close photo">✕</button>
+      <button class="lightbox__prev" type="button" data-lightbox-prev aria-label="Previous photo">←</button>
+      <img class="lightbox__image" alt="" />
+      <button class="lightbox__next" type="button" data-lightbox-next aria-label="Next photo">→</button>
+      <div class="lightbox__footer">
+        <p class="lightbox__caption"></p>
+        <p class="lightbox__counter"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sağ alt köşe sohbet / mesaj widget'ı -->
+  <div class="chat-widget is-collapsed" id="chat-widget">
+    <div class="chat-widget__panel" id="chat-panel">
+      <div class="chat-widget__header">
+        <div class="chat-widget__avatar">
+          <img id="chat-avatar" src="" alt="Berat Tanlasi" />
+        </div>
+        <div>
+          <p class="chat-widget__title">Berat Tanlasi</p>
+          <p class="chat-widget__status">Usually replies by email</p>
+        </div>
+      </div>
+
+      <div class="chat-widget__body">
+        <p class="chat-widget__bubble">
+          Hi, I'm Berat. How can I help you?
+        </p>
+      </div>
+
+      <form class="chat-widget__form" id="chat-form">
+        <input id="chat-message" type="text" placeholder="Write your message..." required />
+        <button type="submit" aria-label="Send message">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 12L20 4L13 20L11 13L4 12Z" fill="currentColor" />
+          </svg>
+        </button>
+      </form>
+    </div>
+
+    <button class="chat-widget__close" id="chat-close" type="button" aria-label="Close message box">✕</button>
+    <button class="chat-widget__launcher" id="chat-open" type="button" aria-label="Open message box">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M4 12L20 4L13 20L11 13L4 12Z" fill="currentColor" />
+      </svg>
+    </button>
+  </div>
+
+  <button class="scroll-cue" id="scroll-cue" type="button" aria-label="Scroll down">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        opacity="0.45" />
+      <path d="M6 3l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  </button>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
