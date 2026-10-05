@@ -878,24 +878,31 @@ const renderAbout = () => {
   setImageWithFallback(document.getElementById("about-avatar"), profileImage, fallbackProfileImage);
 };
 
-// ==================== TRAVEL MAP (Leaflet) ====================
-const loadLeaflet = (() => {
+// ==================== TRAVEL MAP (MapLibre + OpenFreeMap) ====================
+// Vektör harita: her ekran çözünürlüğünde keskin görünür. OpenFreeMap anahtar istemez.
+const MAPLIBRE_BASE = "https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/";
+const mapStyleUrl = () =>
+  `https://tiles.openfreemap.org/styles/${getTheme() === "light" ? "liberty" : "fiord"}`;
+
+// Hikâye verisindeki koordinatlar [enlem, boylam]; MapLibre [boylam, enlem] ister
+const toLngLat = ([lat, lng]) => [lng, lat];
+
+const loadMapLibre = (() => {
   let promise;
   return () => {
     if (promise) return promise;
     promise = new Promise((resolve, reject) => {
-      const base = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/";
       const stylesheet = document.createElement("link");
       stylesheet.rel = "stylesheet";
-      stylesheet.href = `${base}leaflet.min.css`;
+      stylesheet.href = `${MAPLIBRE_BASE}maplibre-gl.css`;
       document.head.appendChild(stylesheet);
 
       const script = document.createElement("script");
-      script.src = `${base}leaflet.min.js`;
-      script.onload = () => resolve(window.L);
+      script.src = `${MAPLIBRE_BASE}maplibre-gl.js`;
+      script.onload = () => resolve(window.maplibregl);
       script.onerror = () => {
         promise = null;
-        reject(new Error("Leaflet could not be loaded"));
+        reject(new Error("MapLibre could not be loaded"));
       };
       document.head.appendChild(script);
     });
@@ -903,52 +910,71 @@ const loadLeaflet = (() => {
   };
 })();
 
+const renderMapPopup = (story) => `
+  <div class="map-popup">
+    <img src="${story.homeImage}" alt="" />
+    <div>
+      <strong>${escapeHtml(story.title)}</strong>
+      <span>${escapeHtml(story.info[0].value)}</span>
+      <a href="#${story.slug}">Read story →</a>
+    </div>
+  </div>
+`;
+
 const mountTravelMap = () => {
   const element = document.getElementById("travel-map");
   if (!element) return;
 
-  loadLeaflet()
-    .then((L) => {
+  loadMapLibre()
+    .then((maplibregl) => {
       if (!element.isConnected) return;
 
       const stories = Object.values(state.destinations);
-      const map = L.map(element, { scrollWheelZoom: false });
-      const esriTiles = (layer) =>
-        `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${layer}/MapServer/tile/{z}/{y}/{x}`;
-      let tileLayers = [];
-      const setMapTheme = () => {
-        tileLayers.forEach((layer) => layer.remove());
-        const tone = getTheme() === "light" ? "Light" : "Dark";
-        tileLayers = [
-          L.tileLayer(esriTiles(`World_${tone}_Gray_Base`), {
-            attribution: "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors",
-            maxZoom: 16,
-          }),
-          L.tileLayer(esriTiles(`World_${tone}_Gray_Reference`), { maxZoom: 16 }),
-        ];
-        tileLayers.forEach((layer) => layer.addTo(map));
-      };
-      setMapTheme();
-      window.addEventListener("themechange", setMapTheme);
+      const bounds = new maplibregl.LngLatBounds();
+      stories.forEach((story) => bounds.extend(toLngLat(story.coords)));
+
+      const map = new maplibregl.Map({
+        container: element,
+        style: mapStyleUrl(),
+        bounds,
+        fitBoundsOptions: { padding: 90 },
+        pitch: 35,
+        // Sayfayı kaydırırken harita takılmasın: Ctrl + tekerlek / iki parmakla yakınlaştırma
+        cooperativeGestures: true,
+        attributionControl: { compact: true },
+      });
+      map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-left");
+
+      // Harita stilinde eksik olan küçük POI ikonları için boş görsel ver (konsol uyarısı olmasın)
+      map.on("styleimagemissing", ({ id }) => {
+        if (!map.hasImage(id)) map.addImage(id, { width: 1, height: 1, data: new Uint8Array(4) });
+      });
+
+      // Kaynak bilgisi kapalı başlasın; "i" düğmesiyle açılır
+      map.once("load", () => {
+        element.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show");
+      });
 
       const markers = {};
       stories.forEach((story) => {
-        markers[story.slug] = L.marker(story.coords, {
-          icon: L.divIcon({
-            className: "map-pin",
-            html: "<span></span>",
-            iconSize: [22, 22],
-            iconAnchor: [11, 11],
-          }),
-          title: story.title,
-        })
-          .addTo(map)
-          .bindPopup(
-            `<strong>${escapeHtml(story.title)}</strong><br><a href="#${story.slug}">Read story →</a>`,
-          );
+        const pin = document.createElement("div");
+        pin.className = "map-pin";
+        pin.innerHTML = "<span></span>";
+        pin.setAttribute("aria-label", story.title);
+
+        markers[story.slug] = new maplibregl.Marker({ element: pin })
+          .setLngLat(toLngLat(story.coords))
+          .setPopup(
+            new maplibregl.Popup({ offset: 18, closeButton: false, maxWidth: "280px" }).setHTML(
+              renderMapPopup(story),
+            ),
+          )
+          .addTo(map);
       });
 
-      map.fitBounds(L.latLngBounds(stories.map((story) => story.coords)).pad(0.4));
+      const setMapTheme = () => map.setStyle(mapStyleUrl());
+      window.addEventListener("themechange", setMapTheme);
+
       state.map = { map, markers };
       addCleanup(() => {
         window.removeEventListener("themechange", setMapTheme);
@@ -968,8 +994,19 @@ const focusMapStop = (slug) => {
   const marker = state.map?.markers[slug];
   if (!story || !marker) return;
 
-  state.map.map.flyTo(story.coords, 16, { duration: prefersReducedMotion ? 0 : 1.2 });
-  marker.openPopup();
+  Object.values(state.map.markers).forEach((other) => {
+    if (other !== marker && other.getPopup().isOpen()) other.togglePopup();
+  });
+
+  state.map.map.flyTo({
+    center: toLngLat(story.coords),
+    zoom: 15.5,
+    pitch: 55,
+    bearing: -18,
+    duration: prefersReducedMotion ? 0 : 2200,
+    essential: true,
+  });
+  if (!marker.getPopup().isOpen()) marker.togglePopup();
 };
 
 const renderTravels = () => {

@@ -1615,7 +1615,7 @@ html[data-theme="light"] .theme-toggle__moon {
 }
 
 .map-card__map {
-  min-height: 380px;
+  height: 460px;
   background: var(--map-bg);
 }
 
@@ -1673,6 +1673,10 @@ html[data-theme="light"] .theme-toggle__moon {
   font-size: 0.8rem;
 }
 
+.map-pin {
+  cursor: pointer;
+}
+
 .map-pin span {
   display: block;
   width: 22px;
@@ -1680,39 +1684,109 @@ html[data-theme="light"] .theme-toggle__moon {
   border-radius: 50%;
   border: 3px solid #fff;
   background: var(--accent);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
   animation: pulse 2s ease-out infinite;
+  transition: transform 0.2s var(--ease-out);
 }
 
-.map-card .leaflet-container {
+.map-pin:hover span {
+  transform: scale(1.2);
+}
+
+/* MapLibre kontrollerini ve açılır kutularını temaya uydur */
+.map-card .maplibregl-map {
   font-family: var(--font-sans);
-  background: var(--map-bg);
 }
 
-.map-card .leaflet-popup-content-wrapper,
-.map-card .leaflet-popup-tip {
+.map-card .maplibregl-popup-content {
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
   background: var(--map-ui);
   color: var(--text);
   box-shadow: var(--shadow);
 }
 
-.map-card .leaflet-popup-content a {
+.map-card .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.map-card .maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.map-card .maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: var(--map-ui);
+}
+
+.map-card .maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.map-card .maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.map-card .maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: var(--map-ui);
+}
+
+.map-card .maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--map-ui);
+}
+
+.map-card .maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--map-ui);
+}
+
+.map-popup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 230px;
+}
+
+.map-popup img {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.map-popup strong {
+  display: block;
+  font-size: 0.98rem;
+}
+
+.map-popup span {
+  display: block;
+  margin: 2px 0 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.map-popup a {
   color: var(--accent);
   font-weight: 600;
+  font-size: 0.85rem;
 }
 
-.map-card .leaflet-bar a {
+.map-card .maplibregl-ctrl-group {
+  border-radius: 12px;
+  overflow: hidden;
   background: var(--map-ui);
-  color: var(--text);
-  border-bottom-color: var(--border);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
-.map-card .leaflet-control-attribution {
+.map-card .maplibregl-ctrl-group button + button {
+  border-top-color: var(--border);
+}
+
+html[data-theme="dark"] .map-card .maplibregl-ctrl-group .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+
+.map-card .maplibregl-ctrl.maplibregl-ctrl-attrib,
+.map-card .maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact {
   background: var(--glass-strong);
-  color: var(--faint);
+  color: var(--muted);
 }
 
-.map-card .leaflet-control-attribution a {
+.map-card .maplibregl-ctrl-attrib a {
   color: var(--muted);
+}
+
+html[data-theme="dark"] .map-card .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
 }
 
 /* ============================================================
@@ -2882,6 +2956,10 @@ body.is-modal-open {
   .map-card__list {
     border-left: 0;
     border-top: 1px solid var(--border);
+  }
+
+  .map-card__map {
+    height: 380px;
   }
 
   .masonry {
