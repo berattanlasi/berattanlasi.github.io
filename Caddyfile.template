@@ -1,0 +1,62 @@
+# Railway (Railpack) bu dosyayı sitenin web sunucusu ayarı olarak kullanır.
+# Railpack'in varsayılan ayarının aynısı; tek fark güvenlik başlığına (CSP)
+# gezi sayfasındaki haritanın (MapLibre) çalışması için gereken
+# blob: worker / görsel izinlerinin eklenmesi.
+{
+	admin off
+	persist_config off
+	auto_https off
+
+	log {
+		format json
+	}
+
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+:{$PORT:80} {
+	log {
+		format json
+	}
+
+	respond /health 200
+
+	# Security headers
+	header {
+		# Enable cross-site filter (XSS) and tell browsers to block detected attacks
+		X-XSS-Protection "1; mode=block"
+		# Prevent some browsers from MIME-sniffing a response away from the declared Content-Type
+		X-Content-Type-Options "nosniff"
+		# Keep referrer data off of HTTP connections
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Content Security Policy (harita için worker-src / child-src / img-src'e blob: eklendi)
+		Content-Security-Policy "default-src 'self'; img-src 'self' data: blob: https: *; style-src 'self' 'unsafe-inline' https: *; script-src 'self' 'unsafe-inline' https: *; worker-src 'self' blob:; child-src 'self' blob:; font-src 'self' data: https: *; connect-src 'self' https: *; media-src 'self' https: *; object-src 'none'; frame-src 'self' https: *;"
+		# Remove Server header
+		-Server
+	}
+
+	root * {{.StaticFileRoot}}
+
+	# Handle static files
+	file_server {
+		hide .git
+		hide .env*
+		hide Caddyfile*
+	}
+
+	# Compression with more formats
+	encode {
+		gzip
+		zstd
+	}
+
+	# Try files with HTML extension{{if .IndexFallback}} and handle SPA routing{{end}}
+	try_files {path} {path}.html {path}/index.html{{if .IndexFallback}} /index.html{{end}}
+
+	handle_errors {
+		rewrite * /{err.status_code}.html
+		file_server
+	}
+}
