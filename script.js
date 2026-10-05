@@ -1,9 +1,12 @@
 // ==================== AYARLAR ====================
 // GitHub kullanıcı adını buradan değiştir: Projeler bölümü public repolarını
 // otomatik çeker. Kullanıcı bulunamazsa aşağıdaki fallbackProjects gösterilir.
-const GITHUB_USERNAME = "Patogon49";
+const GITHUB_USERNAME = "berattanlasi";
 const GITHUB_URL = `https://github.com/${GITHUB_USERNAME}`;
-const LINKEDIN_URL = "https://www.linkedin.com/in/berat-tanlasi";
+const GITHUB_PAGES_REPO = `${GITHUB_USERNAME.toLowerCase()}.github.io`;
+const LINKEDIN_URL = "https://www.linkedin.com/in/berat-tanlasi-580220397/";
+const X_URL = "https://x.com/Soren_49";
+const PINTEREST_URL = "https://www.pinterest.com/b3rad_/";
 const CONTACT_EMAIL = "tanlasiberat1@gmail.com";
 
 // Global state
@@ -16,14 +19,19 @@ const state = {
   cleanups: [],
 };
 
-// GitHub'dan proje gelmezse gösterilecek projeler
+// Elle yazılmış projeler. "repo" alanı GitHub'daki bir repoyla eşleşirse
+// kart buradaki başlık/açıklamayla, GitHub'ın linkleri ve yıldızlarıyla gösterilir.
 const fallbackProjects = [
   {
+    repo: GITHUB_PAGES_REPO,
     title: "Portfolio Website",
     description:
       "A modern portfolio website built with HTML, CSS, and vanilla JavaScript. Features a live canvas background, smooth animations, and responsive design.",
     tags: ["HTML", "CSS", "JavaScript"],
-    links: [{ label: "Code", url: GITHUB_URL }],
+    links: [
+      { label: "Code", url: `${GITHUB_URL}/${GITHUB_PAGES_REPO}` },
+      { label: "Live", url: `https://${GITHUB_PAGES_REPO}` },
+    ],
   },
   {
     title: "Istanbul Travel App",
@@ -102,8 +110,9 @@ const setImageWithFallback = (image, src, fallback) => {
 };
 
 setImageWithFallback(brandAvatar, profileImage, fallbackProfileImage);
-document.querySelectorAll("[data-github-link]").forEach((link) => {
-  link.href = GITHUB_URL;
+const footerLinks = { github: GITHUB_URL, linkedin: LINKEDIN_URL, x: X_URL, pinterest: PINTEREST_URL };
+document.querySelectorAll("[data-social-link]").forEach((link) => {
+  link.href = footerLinks[link.dataset.socialLink];
 });
 document.getElementById("year").textContent = new Date().getFullYear();
 
@@ -203,6 +212,9 @@ const icons = {
   user: strokeIcon('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
   github:
     '<svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.09 3.29 9.4 7.86 10.93.57.1.78-.25.78-.55 0-.27-.01-1.16-.02-2.1-3.2.7-3.87-1.36-3.87-1.36-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.64 1.59.24 2.76.12 3.05.74.8 1.18 1.83 1.18 3.09 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.08.78 2.17 0 1.57-.01 2.83-.01 3.22 0 .3.2.66.79.55A10.52 10.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>',
+  x: '<svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.24 2.25h3.31l-7.23 8.26 8.5 11.24h-6.66l-5.21-6.82-5.97 6.82H1.68l7.73-8.84L1.25 2.25h6.83l4.71 6.23Zm-1.16 17.52h1.83L7.08 4.13H5.12Z"/></svg>',
+  pinterest:
+    '<svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .8C5.8.8 2.6 5.1 2.6 8.7c0 2.18.82 4.12 2.6 4.84.29.12.55 0 .64-.32.06-.22.2-.79.26-1.02.09-.32.05-.43-.18-.71-.5-.6-.82-1.36-.82-2.45 0-3.15 2.36-5.97 6.14-5.97 3.35 0 5.19 2.05 5.19 4.78 0 3.6-1.59 6.64-3.96 6.64-1.3 0-2.28-1.08-1.96-2.4.37-1.58 1.1-3.29 1.1-4.43 0-1.02-.55-1.87-1.68-1.87-1.33 0-2.4 1.38-2.4 3.22 0 1.18.4 1.97.4 1.97s-1.35 5.73-1.6 6.74c-.47 2-.05 4.44-.03 4.69.02.15.21.19.29.07.12-.16 1.65-2.05 2.17-3.94.15-.53.84-3.31.84-3.31.42.8 1.63 1.5 2.92 1.5 3.84 0 6.44-3.5 6.44-8.19C21.4 4.53 17.85.8 12 .8Z"/></svg>',
   linkedin:
     '<svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.36V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13ZM7.12 20.45H3.56V9h3.56v11.45Z"/></svg>',
 };
@@ -210,6 +222,8 @@ const icons = {
 const socialLinks = [
   { label: "GitHub", url: GITHUB_URL, icon: icons.github, external: true },
   { label: "LinkedIn", url: LINKEDIN_URL, icon: icons.linkedin, external: true },
+  { label: "X (Twitter)", url: X_URL, icon: icons.x, external: true },
+  { label: "Pinterest", url: PINTEREST_URL, icon: icons.pinterest, external: true },
   { label: "Email", url: `mailto:${CONTACT_EMAIL}`, icon: icons.mail },
 ];
 
@@ -287,7 +301,7 @@ const renderProjectCard = (project) => `
 `;
 
 // ==================== GITHUB PROJECTS ====================
-const GITHUB_CACHE_KEY = `gh-repos:${GITHUB_USERNAME}`;
+const GITHUB_CACHE_KEY = `gh-repos-v2:${GITHUB_USERNAME}`;
 
 const readRepoCache = () => {
   try {
@@ -306,16 +320,28 @@ const writeRepoCache = (repos) => {
   }
 };
 
-const repoToProject = (repo) => ({
-  title: repo.name.replace(/[-_]+/g, " "),
-  description: repo.description || "No description yet — check the code on GitHub.",
-  tags: [repo.language, ...(repo.topics || [])].filter(Boolean).slice(0, 4),
-  stars: repo.stargazers_count,
-  links: [
+const repoToProject = (repo) => {
+  const repoName = repo.name.toLowerCase();
+  const known = fallbackProjects.find((project) => project.repo === repoName);
+  const links = [
     { label: "Code", url: repo.html_url },
     ...(repo.homepage ? [{ label: "Live", url: repo.homepage }] : []),
-  ],
-});
+  ];
+  if (repoName === GITHUB_PAGES_REPO && !repo.homepage) {
+    links.push({ label: "Live", url: `https://${GITHUB_PAGES_REPO}` });
+  }
+
+  if (known) return { ...known, stars: repo.stargazers_count, links };
+
+  return {
+    repo: repoName,
+    title: repo.name.replace(/[-_]+/g, " "),
+    description: repo.description || "No description yet — check the code on GitHub.",
+    tags: [repo.language, ...(repo.topics || [])].filter(Boolean).slice(0, 4),
+    stars: repo.stargazers_count,
+    links,
+  };
+};
 
 const loadGithubRepos = () => {
   if (state.reposPromise) return state.reposPromise;
@@ -344,7 +370,15 @@ const loadGithubRepos = () => {
   return state.reposPromise;
 };
 
-const getProjects = () => (state.repos?.length ? state.repos : fallbackProjects);
+// GitHub repoları + GitHub'da karşılığı olmayan elle yazılmış projeler
+const getProjects = () => {
+  if (!state.repos?.length) return fallbackProjects;
+  const repoNames = new Set(state.repos.map((project) => project.repo));
+  return [
+    ...state.repos,
+    ...fallbackProjects.filter((project) => !repoNames.has(project.repo)),
+  ];
+};
 
 const refreshProjectGrids = () => {
   main.querySelectorAll("[data-projects-grid]").forEach((grid) => {
@@ -1019,6 +1053,14 @@ const renderContact = () => {
           <a class="contact-method" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">
             <span class="contact-method__icon">${icons.github}</span>
             <span><small>GitHub</small>${escapeHtml(GITHUB_USERNAME)}</span>
+          </a>
+          <a class="contact-method" href="${X_URL}" target="_blank" rel="noopener noreferrer">
+            <span class="contact-method__icon">${icons.x}</span>
+            <span><small>X (Twitter)</small>@Soren_49</span>
+          </a>
+          <a class="contact-method" href="${PINTEREST_URL}" target="_blank" rel="noopener noreferrer">
+            <span class="contact-method__icon">${icons.pinterest}</span>
+            <span><small>Pinterest</small>b3rad_</span>
           </a>
           <div class="contact-method contact-method--static">
             <span class="contact-method__icon">${icons.pin}</span>
