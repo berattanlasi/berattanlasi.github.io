@@ -184,18 +184,21 @@ const runCleanups = () => {
 };
 
 // ==================== ROUTING ====================
-const pageRoutes = ["home", "about", "travels", "projects", "gallery", "contact"];
+const pageRoutes = ["home", "about", "travels", "projects", "gallery", "blog", "contact"];
 
 const getRoute = () => {
   const hash = window.location.hash.replace(/^#/, "").toLowerCase();
   if (!hash) return "home";
   if (pageRoutes.includes(hash)) return hash;
   if (state.destinations[hash]) return hash;
+  if (hash.startsWith("blog/") && getPost(hash.slice(5))) return hash;
   return "home";
 };
 
 const updateActiveNav = (route) => {
-  const navRoute = state.destinations[route] ? "travels" : route;
+  let navRoute = route;
+  if (state.destinations[route]) navRoute = "travels";
+  if (route.startsWith("blog/")) navRoute = "blog";
   navLinks.forEach((link) => {
     if (link.dataset.nav === navRoute) {
       link.setAttribute("aria-current", "page");
@@ -212,10 +215,11 @@ const updateTitle = (route) => {
     travels: "Travel Stories | Berat Tanlasi",
     projects: "Projects | Berat Tanlasi",
     gallery: "Gallery | Berat Tanlasi",
+    blog: "Blog | Berat Tanlasi",
     contact: "Contact | Berat Tanlasi",
   };
-  document.title =
-    titles[route] || `${state.destinations[route]?.title} | Berat Tanlasi`;
+  const page = route.startsWith("blog/") ? getPost(route.slice(5)) : state.destinations[route];
+  document.title = titles[route] || `${page?.title} | Berat Tanlasi`;
 };
 
 // ==================== UTILITY FUNCTIONS ====================
@@ -753,6 +757,21 @@ const renderHome = () => {
         </div>
       </div>
     </section>
+
+    ${
+      blogPosts.length
+        ? `
+          <section class="home-section container">
+            ${renderSectionHead({
+              kicker: "From the blog",
+              title: "Latest writing",
+              link: { href: "#blog", label: "All posts" },
+            })}
+            <div class="post-list">${renderPostCard(blogPosts[0])}</div>
+          </section>
+        `
+        : ""
+    }
 
     <section class="home-section container">
       ${renderSectionHead({
@@ -1347,6 +1366,223 @@ const renderStory = (story) => {
   `;
 };
 
+// ==================== BLOG ====================
+// Yazılar blog.js dosyasında (window.blogPosts) tutulur. Okuma süresi
+// yazının kelime sayısından otomatik hesaplanır.
+const blogPosts = (window.blogPosts || []).map((post) => ({
+  ...post,
+  readMinutes: Math.max(
+    1,
+    Math.round(post.content.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length / 200),
+  ),
+}));
+
+const getPost = (slug) => blogPosts.find((post) => post.slug === slug);
+
+// Yazı kapağı: n8n tarzı birbirine bağlı düğümlerden oluşan küçük bir çizim
+let blogCoverCount = 0;
+const renderBlogCover = (post) => {
+  blogCoverCount += 1;
+  const id = `blog-cover-${blogCoverCount}`;
+  const [first, second, third, fourth, fifth] = post.coverNodes || ["Trigger", "HTTP", "IF", "Action", "Log"];
+  const nodes = [
+    { x: 30, y: 154, label: first, color: "#4ea8ff" },
+    { x: 200, y: 80, label: second, color: "#8b5cf6" },
+    { x: 370, y: 154, label: third, color: "#fbbf24" },
+    { x: 540, y: 80, label: fourth, color: "#35d07f" },
+    { x: 540, y: 228, label: fifth, color: "#ff5b9e" },
+  ];
+  const edges = [
+    "M140 180 C 170 180 170 106 200 106",
+    "M310 106 C 340 106 340 180 370 180",
+    "M480 180 C 510 180 510 106 540 106",
+    "M480 180 C 510 180 510 254 540 254",
+  ];
+
+  return `
+    <svg class="blog-cover" viewBox="0 0 680 360" role="img" aria-label="${escapeHtml(post.title)}">
+      <defs>
+        <linearGradient id="${id}-edge" x1="0" x2="1">
+          <stop offset="0" stop-color="#4ea8ff" />
+          <stop offset="0.5" stop-color="#8b5cf6" />
+          <stop offset="1" stop-color="#ff5b9e" />
+        </linearGradient>
+        <radialGradient id="${id}-glow" cx="0.5" cy="0.45" r="0.6">
+          <stop offset="0" stop-color="#7c6cff" stop-opacity="0.35" />
+          <stop offset="1" stop-color="#7c6cff" stop-opacity="0" />
+        </radialGradient>
+        <pattern id="${id}-dots" width="22" height="22" patternUnits="userSpaceOnUse">
+          <circle cx="2" cy="2" r="1.2" class="blog-cover__dot" />
+        </pattern>
+      </defs>
+      <rect class="blog-cover__bg" width="680" height="360" />
+      <rect width="680" height="360" fill="url(#${id}-dots)" />
+      <rect width="680" height="360" fill="url(#${id}-glow)" />
+      ${edges.map((d) => `<path class="blog-cover__edge" d="${d}" stroke="url(#${id}-edge)" />`).join("")}
+      ${nodes
+        .map(
+          (node) => `
+            <g class="blog-cover__node">
+              <rect x="${node.x}" y="${node.y}" width="110" height="52" rx="14" />
+              <circle cx="${node.x + 20}" cy="${node.y + 26}" r="6" fill="${node.color}" />
+              <text x="${node.x + 34}" y="${node.y + 31}">${escapeHtml(node.label)}</text>
+            </g>
+          `,
+        )
+        .join("")}
+    </svg>
+  `;
+};
+
+const renderPostTags = (post) => `
+  <div class="post-tags">
+    ${post.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}
+  </div>
+`;
+
+const renderPostCard = (post) => `
+  <article class="post-card spot reveal" lang="${post.lang}">
+    <a class="post-card__media" href="#blog/${post.slug}" tabindex="-1" aria-hidden="true">
+      ${renderBlogCover(post)}
+    </a>
+    <div class="post-card__body">
+      ${renderPostTags(post)}
+      <h3 class="post-card__title"><a href="#blog/${post.slug}">${escapeHtml(post.title)}</a></h3>
+      <p class="post-card__excerpt">${escapeHtml(post.deck)}</p>
+      <div class="post-card__meta">
+        <span>${icons.calendar}${escapeHtml(post.dateLabel)}</span>
+        <span>${icons.clock}${post.readMinutes} dk okuma</span>
+      </div>
+      <a class="text-link" href="#blog/${post.slug}">Yazıyı oku ${icons.arrowRight}</a>
+    </div>
+  </article>
+`;
+
+const renderBlog = () => {
+  main.innerHTML = `
+    <section class="container page-section" id="blog">
+      <header class="page-header">
+        <p class="kicker">Blog</p>
+        <h1 class="page-title">Notes on code &amp; <span class="gradient-text">automation</span></h1>
+        <p>Long-form writing about software, automation and the tools I learn along the way.</p>
+      </header>
+      <div class="post-list">
+        ${blogPosts.map(renderPostCard).join("") || '<p class="empty">No posts yet.</p>'}
+      </div>
+    </section>
+  `;
+};
+
+// İçindekiler: yazıdaki h2 başlıklarından otomatik oluşur, okunan bölüm vurgulanır
+const mountPostToc = () => {
+  const headings = [...main.querySelectorAll(".post-body h2")];
+  headings.forEach((heading, index) => {
+    heading.id = `bolum-${index + 1}`;
+  });
+
+  const items = headings
+    .map(
+      (heading, index) => `
+        <li>
+          <button type="button" data-toc-target="${heading.id}">
+            <span>${pad(index + 1)}</span>${escapeHtml(heading.textContent)}
+          </button>
+        </li>
+      `,
+    )
+    .join("");
+  main.querySelectorAll("[data-toc-list]").forEach((list) => {
+    list.innerHTML = items;
+  });
+
+  if (!headings.length) return;
+
+  // Ekranın üst kısmını geçmiş son başlık "okunan bölüm" sayılır; sayfanın
+  // sonuna gelindiyse son bölüm seçilir (hızlı kaydırmada da doğru çalışır)
+  let activeId = null;
+  let ticking = false;
+  const updateActive = () => {
+    ticking = false;
+    let current = headings[0].id;
+    for (const heading of headings) {
+      if (heading.getBoundingClientRect().top <= 160) current = heading.id;
+      else break;
+    }
+    const atBottom =
+      window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+    if (atBottom) current = headings[headings.length - 1].id;
+    if (current === activeId) return;
+    activeId = current;
+    main.querySelectorAll("[data-toc-target]").forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.tocTarget === current);
+    });
+  };
+  const onScroll = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(updateActive);
+  };
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  addCleanup(() => window.removeEventListener("scroll", onScroll));
+  updateActive();
+};
+
+const renderPost = (post) => {
+  main.innerHTML = `
+    <section class="post-page container" lang="${post.lang}">
+      <a class="back-link" href="#blog">${icons.arrowLeft} Tüm yazılar</a>
+
+      <header class="post-hero">
+        <div class="post-hero__text">
+          ${renderPostTags(post)}
+          <h1 class="post-title">${escapeHtml(post.title)}</h1>
+          <p class="post-deck">${escapeHtml(post.deck)}</p>
+          <div class="post-meta">
+            <span class="post-meta__author"><img src="${profileImage}" alt="" />Berat Tanlasi</span>
+            <span>${icons.calendar}${escapeHtml(post.dateLabel)}</span>
+            <span>${icons.clock}${post.readMinutes} dk okuma</span>
+          </div>
+        </div>
+        <div class="post-hero__art">${renderBlogCover(post)}</div>
+      </header>
+
+      <div class="post-layout">
+        <article class="post-body">
+          <details class="post-toc-mobile">
+            <summary>İçindekiler</summary>
+            <ol class="toc-list" data-toc-list></ol>
+          </details>
+
+          ${post.content}
+
+          <footer class="post-end">
+            <div class="author-card">
+              <img src="${profileImage}" alt="Berat Tanlasi" />
+              <div>
+                <p class="kicker">Yazar</p>
+                <strong>Berat Tanlasi</strong>
+                <p>Yazılım geliştiriyor, İstanbul'u geziyor ve öğrendiklerini yazıya döküyor.</p>
+              </div>
+            </div>
+            <div class="post-end__actions">
+              <a class="button button--ghost" href="#blog">${icons.arrowLeft} Tüm yazılar</a>
+              <button class="button" type="button" data-scroll-top>Başa dön ↑</button>
+            </div>
+          </footer>
+        </article>
+
+        <aside class="post-toc" aria-label="İçindekiler">
+          <p class="kicker">İçindekiler</p>
+          <ol class="toc-list" data-toc-list></ol>
+        </aside>
+      </div>
+    </section>
+  `;
+
+  mountPostToc();
+};
+
 // ==================== LIGHTBOX ====================
 const resolveGallery = (key) => {
   if (key.startsWith("main")) return filterGallery(key.split(":")[1] || "all");
@@ -1406,6 +1642,21 @@ main.addEventListener("click", (event) => {
   const filterButton = event.target.closest("[data-filter]");
   if (filterButton) {
     setGalleryFilter(filterButton.dataset.filter);
+    return;
+  }
+
+  const tocButton = event.target.closest("[data-toc-target]");
+  if (tocButton) {
+    document.getElementById(tocButton.dataset.tocTarget)?.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "start",
+    });
+    tocButton.closest("details")?.removeAttribute("open");
+    return;
+  }
+
+  if (event.target.closest("[data-scroll-top]")) {
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
     return;
   }
 
@@ -1503,6 +1754,7 @@ const pageRenderers = {
   travels: renderTravels,
   projects: renderProjects,
   gallery: renderGallery,
+  blog: renderBlog,
   contact: renderContact,
 };
 
@@ -1519,6 +1771,8 @@ const render = () => {
 
   if (pageRenderers[route]) {
     pageRenderers[route]();
+  } else if (route.startsWith("blog/")) {
+    renderPost(getPost(route.slice(5)));
   } else {
     renderStory(state.destinations[route]);
   }
