@@ -45,7 +45,7 @@ const fallbackProjects = [
 const assetPath = (path) => encodeURI(path);
 const topkapiImage = (fileName) => assetPath(`images/topkapi/${fileName}`);
 const miniaturkImage = (fileName) => assetPath(`images/miniaturk/${fileName}`);
-const profileImage = assetPath("images/profil.png");
+const profileImage = assetPath("images/profilresmi.jpeg");
 const fallbackProfileImage = topkapiImage("1.jpg");
 
 // Klasörlerdeki fotoğraflar 1.jpg, 2.jpg ... şeklinde numaralı.
