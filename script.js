@@ -109,7 +109,7 @@ const setImageWithFallback = (image, src, fallback) => {
   };
 };
 
-setImageWithFallback(brandAvatar, profileImage, fallbackProfileImage);
+setImageWithFallback(brandAvatar, assetPath("images/logo.jpg"), profileImage);
 const footerLinks = { github: GITHUB_URL, linkedin: LINKEDIN_URL, x: X_URL, pinterest: PINTEREST_URL };
 document.querySelectorAll("[data-social-link]").forEach((link) => {
   link.href = footerLinks[link.dataset.socialLink];
