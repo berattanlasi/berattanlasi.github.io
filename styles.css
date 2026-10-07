@@ -865,51 +865,53 @@ html[data-theme="light"] .theme-toggle__moon {
   animation: slideInUp 0.9s var(--ease-out) 0.2s both;
 }
 
-.avatar-orbit {
+.globe {
   position: relative;
-  width: min(400px, 100%);
+  width: min(480px, 100%);
   aspect-ratio: 1;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
 }
 
-.avatar-orbit__ring,
-.avatar-orbit::before {
-  content: "";
+.globe.is-dragging {
+  cursor: grabbing;
+}
+
+.globe canvas {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(from 0deg, #4ea8ff, #8b5cf6, #ff5b9e, #4ea8ff);
-  animation: spin 12s linear infinite;
-}
-
-.avatar-orbit__ring {
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
-}
-
-.avatar-orbit::before {
-  inset: 8%;
-  filter: blur(48px);
-  opacity: 0.45;
-}
-
-.avatar-orbit__photo {
-  position: absolute;
-  inset: 14px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: var(--bg-elev);
-}
-
-.avatar-orbit__photo img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  filter: grayscale(1) contrast(1.05);
-  transition: transform 0.6s var(--ease-out);
 }
 
-.avatar-orbit:hover .avatar-orbit__photo img {
-  transform: scale(1.05);
+.globe__label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 91, 158, 0.45);
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.globe__label .icon {
+  width: 13px;
+  height: 13px;
+  color: var(--pink);
 }
 
 .float-chip {
@@ -941,7 +943,7 @@ html[data-theme="light"] .theme-toggle__moon {
 }
 
 .float-chip--2 {
-  top: 46%;
+  top: 68%;
   right: -12%;
   animation-delay: -1.6s;
 }
@@ -2940,8 +2942,8 @@ body.is-modal-open {
     order: -1;
   }
 
-  .avatar-orbit {
-    width: min(300px, 72vw);
+  .globe {
+    width: min(340px, 84vw);
   }
 
   .about-photo {
@@ -4401,4 +4403,14 @@ body.is-modal-open {
   .d-target::before {
     display: none;
   }
+}
+
+/* Profil fotoğrafının arka planı şeffaf: arkasında temanın zemin rengi görünür
+   (açık temada açık, koyu temada koyu) */
+.brand__photo,
+.about-photo img,
+.chat-widget__avatar img,
+.post-meta__author img,
+.author-card img {
+  background: var(--bg-elev);
 }

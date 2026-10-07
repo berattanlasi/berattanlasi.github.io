@@ -45,7 +45,7 @@ const fallbackProjects = [
 const assetPath = (path) => encodeURI(path);
 const topkapiImage = (fileName) => assetPath(`images/topkapi/${fileName}`);
 const miniaturkImage = (fileName) => assetPath(`images/miniaturk/${fileName}`);
-const profileImage = assetPath("images/profilresmi.jpeg");
+const profileImage = assetPath("images/profilresmi.png");
 const fallbackProfileImage = topkapiImage("1.jpg");
 
 // Klasörlerdeki fotoğraflar 1.jpg, 2.jpg ... şeklinde numaralı.
@@ -635,6 +635,290 @@ const startCounters = () => {
   addCleanup(() => observer.disconnect());
 };
 
+// ==================== HERO: DÖNEN 3D DÜNYA ====================
+// Kara parçaları globe-data.js'teki noktalardan çizilir (kütüphane yok).
+// Fareyle / parmakla sürüklenebilir, bırakınca kendi kendine döner.
+const ISTANBUL = { lat: 41.01, lon: 28.98 };
+const toRad = (deg) => (deg * Math.PI) / 180;
+
+const decodeGlobeLand = (() => {
+  let cache = null;
+  return () => {
+    if (cache) return cache;
+    const binary = atob(window.GLOBE_LAND || "");
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    const values = new Int16Array(bytes.buffer);
+    const count = values.length / 2;
+    cache = { count, cosLat: new Float32Array(count), sinLat: new Float32Array(count), lon: new Float32Array(count) };
+    for (let i = 0; i < count; i += 1) {
+      const lat = toRad(values[i * 2] / 10);
+      cache.cosLat[i] = Math.cos(lat);
+      cache.sinLat[i] = Math.sin(lat);
+      cache.lon[i] = toRad(values[i * 2 + 1] / 10);
+    }
+    return cache;
+  };
+})();
+
+const startGlobe = () => {
+  const container = document.getElementById("globe");
+  const canvas = container?.querySelector("canvas");
+  const context = canvas?.getContext("2d");
+  const label = document.getElementById("globe-label");
+  if (!context || !window.GLOBE_LAND) return;
+
+  const land = decodeGlobeLand();
+  const TILT = toRad(24);
+  const cosTilt = Math.cos(TILT);
+  const sinTilt = Math.sin(TILT);
+  const HUE_STEPS = 24;
+  const AUTO_SPEED = 0.0022;
+
+  let size = 0;
+  let dpr = 1;
+  let rotation = -toRad(ISTANBUL.lon);
+  let velocity = AUTO_SPEED;
+  let dragging = false;
+  let lastX = 0;
+  let frameId = null;
+  let visible = true;
+  let sprites = [];
+
+  // Her renk tonu için bir kez yumuşak kenarlı nokta çiz, karede sadece kopyala
+  const buildSprites = () => {
+    const light = getTheme() === "light";
+    sprites = Array.from({ length: HUE_STEPS }, (_, step) => {
+      const sprite = document.createElement("canvas");
+      sprite.width = 24;
+      sprite.height = 24;
+      const spriteContext = sprite.getContext("2d");
+      const hue = 205 + (step / (HUE_STEPS - 1)) * 125;
+      const color = `hsl(${hue}, 90%, ${light ? 52 : 68}%)`;
+      const gradient = spriteContext.createRadialGradient(12, 12, 0, 12, 12, 12);
+      gradient.addColorStop(0, color);
+      gradient.addColorStop(0.45, color);
+      gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+      spriteContext.fillStyle = gradient;
+      spriteContext.fillRect(0, 0, 24, 24);
+      return sprite;
+    });
+  };
+
+  const resize = () => {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    size = container.clientWidth;
+    canvas.width = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
+    context.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+
+  // Küre üzerindeki bir noktayı ekrana yansıt (ortografik izdüşüm + eğim)
+  const project = (cosLat, sinLat, lon, center, radius) => {
+    const x = cosLat * Math.sin(lon + rotation);
+    const z = cosLat * Math.cos(lon + rotation);
+    const y2 = sinLat * cosTilt - z * sinTilt;
+    const z2 = z * cosTilt + sinLat * sinTilt;
+    return { x: center + x * radius, y: center - y2 * radius, z: z2 };
+  };
+
+  const draw = (time) => {
+    const light = getTheme() === "light";
+    const center = size / 2;
+    const radius = size * 0.4;
+    context.clearRect(0, 0, size, size);
+
+    // Arka yüzdeki noktalar (kürenin içinden soluk görünür → derinlik hissi)
+    context.globalAlpha = light ? 0.1 : 0.13;
+    for (let i = 0; i < land.count; i += 1) {
+      const p = project(land.cosLat[i], land.sinLat[i], land.lon[i], center, radius);
+      if (p.z >= 0) continue;
+      const hueStep = Math.min(HUE_STEPS - 1, Math.max(0, Math.floor((p.x / size) * HUE_STEPS)));
+      context.drawImage(sprites[hueStep], p.x - 1.5, p.y - 1.5, 3, 3);
+    }
+
+    // Küre gövdesi
+    const body = context.createRadialGradient(
+      center - radius * 0.35,
+      center - radius * 0.4,
+      radius * 0.1,
+      center,
+      center,
+      radius,
+    );
+    body.addColorStop(0, light ? "rgba(255, 255, 255, 0.85)" : "rgba(40, 48, 84, 0.75)");
+    body.addColorStop(1, light ? "rgba(226, 230, 245, 0.85)" : "rgba(10, 12, 24, 0.85)");
+    context.globalAlpha = 1;
+    context.fillStyle = body;
+    context.beginPath();
+    context.arc(center, center, radius, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = light ? "rgba(124, 58, 237, 0.25)" : "rgba(140, 160, 255, 0.28)";
+    context.lineWidth = 1;
+    context.stroke();
+
+    // Ön yüzdeki kara noktaları
+    for (let i = 0; i < land.count; i += 1) {
+      const p = project(land.cosLat[i], land.sinLat[i], land.lon[i], center, radius);
+      if (p.z < 0) continue;
+      const hueStep = Math.min(HUE_STEPS - 1, Math.max(0, Math.floor((p.x / size) * HUE_STEPS)));
+      const dot = 2.2 + p.z * 2.2;
+      context.globalAlpha = 0.35 + p.z * 0.65;
+      context.drawImage(sprites[hueStep], p.x - dot / 2, p.y - dot / 2, dot, dot);
+    }
+    context.globalAlpha = 1;
+
+    // Yörüngede dönen küçük uydu (süs)
+    const orbitAngle = (time || 0) * 0.0004;
+    context.save();
+    context.translate(center, center);
+    context.rotate(toRad(-18));
+    const orbitA = radius * 1.22;
+    const orbitB = radius * 0.36;
+    const sx = Math.cos(orbitAngle) * orbitA;
+    const sy = Math.sin(orbitAngle) * orbitB;
+    const drawSatellite = () => {
+      const satellite = context.createRadialGradient(sx, sy, 0, sx, sy, 9);
+      satellite.addColorStop(0, "#ffffff");
+      satellite.addColorStop(0.3, light ? "#7c3aed" : "#8bd0ff");
+      satellite.addColorStop(1, "rgba(139, 208, 255, 0)");
+      context.fillStyle = satellite;
+      context.beginPath();
+      context.arc(sx, sy, 9, 0, Math.PI * 2);
+      context.fill();
+    };
+    context.setLineDash([3, 6]);
+    context.strokeStyle = light ? "rgba(124, 58, 237, 0.28)" : "rgba(160, 170, 255, 0.25)";
+
+    // Yörüngenin arka yarısı (üst kısım) kürenin arkasından geçer: kürenin
+    // dairesi kırpılır, böylece çizgi ve uydu sadece kürenin dışında görünür
+    context.save();
+    context.beginPath();
+    context.rect(-size, -size, size * 2, size * 2);
+    context.arc(0, 0, radius, 0, Math.PI * 2);
+    context.clip("evenodd");
+    context.beginPath();
+    context.ellipse(0, 0, orbitA, orbitB, 0, Math.PI, Math.PI * 2);
+    context.stroke();
+    if (Math.sin(orbitAngle) < 0) drawSatellite();
+    context.restore();
+
+    // Ön yarısı (alt kısım) kürenin önünden geçer
+    context.beginPath();
+    context.ellipse(0, 0, orbitA, orbitB, 0, 0, Math.PI);
+    context.stroke();
+    context.setLineDash([]);
+    if (Math.sin(orbitAngle) >= 0) drawSatellite();
+    context.restore();
+
+    // İstanbul işareti: parlayan nokta + yayılan halkalar
+    const ist = project(Math.cos(toRad(ISTANBUL.lat)), Math.sin(toRad(ISTANBUL.lat)), toRad(ISTANBUL.lon), center, radius);
+    if (ist.z > 0) {
+      const pulse = ((time || 0) % 2200) / 2200;
+      for (const offset of [0, 0.5]) {
+        const phase = (pulse + offset) % 1;
+        context.strokeStyle = `rgba(255, 91, 158, ${(1 - phase) * 0.8 * ist.z})`;
+        context.lineWidth = 2;
+        context.beginPath();
+        context.arc(ist.x, ist.y, 5 + phase * 22, 0, Math.PI * 2);
+        context.stroke();
+      }
+      context.fillStyle = "#ff5b9e";
+      context.beginPath();
+      context.arc(ist.x, ist.y, 5, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = "#ffffff";
+      context.beginPath();
+      context.arc(ist.x, ist.y, 2, 0, Math.PI * 2);
+      context.fill();
+    }
+    if (label) {
+      label.style.transform = `translate(${ist.x + 14}px, ${ist.y - 16}px)`;
+      label.style.opacity = ist.z > 0.15 ? String(Math.min(1, (ist.z - 0.15) * 4)) : "0";
+    }
+  };
+
+  const loop = (time) => {
+    if (!dragging) {
+      velocity += (AUTO_SPEED - velocity) * 0.02; // bırakınca yavaşça normal hıza dön
+      rotation += velocity;
+    }
+    draw(time);
+    frameId = visible ? requestAnimationFrame(loop) : null;
+  };
+
+  const start = () => {
+    if (prefersReducedMotion) {
+      draw(0);
+      return;
+    }
+    if (frameId === null && visible) frameId = requestAnimationFrame(loop);
+  };
+
+  const stop = () => {
+    if (frameId !== null) cancelAnimationFrame(frameId);
+    frameId = null;
+  };
+
+  // Sürükleyerek çevirme
+  const onDown = (event) => {
+    dragging = true;
+    lastX = event.clientX;
+    container.classList.add("is-dragging");
+    container.setPointerCapture?.(event.pointerId);
+  };
+  const onMove = (event) => {
+    if (!dragging) return;
+    const dx = event.clientX - lastX;
+    lastX = event.clientX;
+    velocity = (dx / size) * 2.2;
+    rotation += velocity;
+    if (prefersReducedMotion) draw(0);
+  };
+  const onUp = () => {
+    dragging = false;
+    container.classList.remove("is-dragging");
+  };
+
+  buildSprites();
+  resize();
+  start();
+
+  container.addEventListener("pointerdown", onDown);
+  container.addEventListener("pointermove", onMove);
+  container.addEventListener("pointerup", onUp);
+  container.addEventListener("pointercancel", onUp);
+
+  const onResize = () => {
+    resize();
+    draw(0);
+  };
+  const onTheme = () => {
+    buildSprites();
+    draw(0);
+  };
+  window.addEventListener("resize", onResize);
+  window.addEventListener("themechange", onTheme);
+
+  // Ekran dışındayken çizimi durdur
+  const observer =
+    "IntersectionObserver" in window
+      ? new IntersectionObserver(([entry]) => {
+          visible = entry.isIntersecting;
+          if (visible) start();
+          else stop();
+        })
+      : null;
+  observer?.observe(container);
+
+  addCleanup(() => {
+    stop();
+    observer?.disconnect();
+    window.removeEventListener("resize", onResize);
+    window.removeEventListener("themechange", onTheme);
+  });
+};
+
 // ==================== PAGE RENDERING ====================
 const renderHome = () => {
   const stories = Object.values(state.destinations);
@@ -671,14 +955,9 @@ const renderHome = () => {
       </div>
 
       <div class="hero__visual">
-        <div class="avatar-orbit">
-          <div class="avatar-orbit__ring"></div>
-          <div class="avatar-orbit__photo">
-            <img id="hero-avatar" src="${profileImage}" alt="Portrait of Berat Tanlasi" decoding="async" />
-          </div>
-          <span class="float-chip float-chip--1">${icons.code} Web Developer</span>
-          <span class="float-chip float-chip--2">${icons.pen} Travel Writer</span>
-          <span class="float-chip float-chip--3">${icons.camera} Street Photographer</span>
+        <div class="globe" id="globe">
+          <canvas role="img" aria-label="A rotating dotted globe with Istanbul highlighted"></canvas>
+          <span class="globe__label" id="globe-label" aria-hidden="true">${icons.pin} Istanbul</span>
         </div>
       </div>
     </section>
@@ -789,7 +1068,7 @@ const renderHome = () => {
     </section>
   `;
 
-  setImageWithFallback(document.getElementById("hero-avatar"), profileImage, fallbackProfileImage);
+  startGlobe();
   startTyping();
   startCodeTyping();
   startCounters();
